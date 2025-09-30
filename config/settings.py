@@ -49,9 +49,9 @@ class Settings:
     
     # Scopes necesarios para Google Calendar (lectura y escritura)
     GOOGLE_SCOPES: List[str] = [
-        'https://www.googleapis.com/auth/calendar',  # Acceso completo
-        'https://www.googleapis.com/auth/calendar.events'  # Gestión de eventos
-    ]
+    'https://www.googleapis.com/auth/calendar'
+]
+
     
     # ID del calendario principal
     CALENDAR_ID = os.getenv('CALENDAR_ID', 'primary')

@@ -506,6 +506,8 @@ class AgentVerseInterface:
 # ==========================================
 
 if __name__ == "__main__":
+    import os
+
     # Configurar manejadores de señales
     setup_signal_handlers()
     
