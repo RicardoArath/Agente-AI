@@ -157,3 +157,127 @@
 2025-09-29 19:35:07 - agentverse.agent_handler - ERROR - Error mostrando eventos: Error de API: <HttpError 400 when requesting https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=50&singleEvents=true&orderBy=startTime&timeMin=2025-09-29T19%3A35%3A07.330422&timeMax=2025-10-06T19%3A35%3A07.330422&alt=json returned "Bad Request". Details: "[{'domain': 'global', 'reason': 'badRequest', 'message': 'Bad Request'}]">
 2025-09-29 19:35:07 - agentverse.agent_handler - INFO - ✅ Mensaje procesado exitosamente
 2025-09-29 19:51:04 - __main__ - INFO - 📨 Señal 2 recibida, cerrando limpiamente...
+2025-09-29 20:02:44 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:05:43 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:07:12 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:07:12 - agentverse.agent_handler - INFO - 🤖 AgentVerse Handler iniciado para agente: agent1qgalpghkvfs6fpm262y8j6vpluvzhhhdl9xx24x5wdz4lcz90ffg5z47jac
+2025-09-29 20:07:12 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:07:12 - __main__ - INFO - ✅ Entorno validado correctamente
+2025-09-29 20:07:12 - __main__ - INFO - 📊 Obteniendo estado del agente...
+2025-09-29 20:07:12 - calendar_service.calendar_client - INFO - Inicializando cliente de Google Calendar...
+2025-09-29 20:07:12 - calendar_service.calendar_client - INFO - 📄 Credenciales cargadas desde archivo
+2025-09-29 20:07:12 - calendar_service.calendar_client - INFO - 🔄 Renovando credenciales...
+2025-09-29 20:07:13 - calendar_service.calendar_client - INFO - ✅ Credenciales renovadas
+2025-09-29 20:07:13 - calendar_service.calendar_client - INFO - 💾 Credenciales guardadas en C:\Users\ricar\Desktop\Calendar_agent\credentials\token.json
+2025-09-29 20:07:13 - calendar_service.calendar_client - INFO - ✅ Cliente de Google Calendar inicializado correctamente
+2025-09-29 20:07:13 - calendar_service.calendar_client - INFO - ℹ️ Obteniendo información del calendario: primary
+2025-09-29 20:07:27 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:07:27 - agentverse.agent_handler - INFO - 🤖 AgentVerse Handler iniciado para agente: agent1qgalpghkvfs6fpm262y8j6vpluvzhhhdl9xx24x5wdz4lcz90ffg5z47jac
+2025-09-29 20:07:27 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:07:27 - __main__ - INFO - ✅ Entorno validado correctamente
+2025-09-29 20:07:27 - __main__ - INFO - 📨 Procesando mensaje: Crear reunión de prueba mañana a las 10am
+2025-09-29 20:07:27 - agentverse.agent_handler - INFO - 📨 Procesando mensaje: 'Crear reunión de prueba mañana a las 10am...'
+2025-09-29 20:07:27 - agentverse.agent_handler - INFO - 🎯 Intención detectada: create_event
+2025-09-29 20:07:27 - agentverse.agent_handler - INFO - ➕ Procesando solicitud de crear evento...
+2025-09-29 20:07:27 - agentverse.agent_handler - INFO - ✅ Mensaje procesado exitosamente
+2025-09-29 20:07:41 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:07:41 - agentverse.agent_handler - INFO - 🤖 AgentVerse Handler iniciado para agente: agent1qgalpghkvfs6fpm262y8j6vpluvzhhhdl9xx24x5wdz4lcz90ffg5z47jac
+2025-09-29 20:07:41 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:07:41 - __main__ - INFO - ✅ Entorno validado correctamente
+2025-09-29 20:08:08 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:08:08 - agentverse.agent_handler - INFO - 🤖 AgentVerse Handler iniciado para agente: agent1qgalpghkvfs6fpm262y8j6vpluvzhhhdl9xx24x5wdz4lcz90ffg5z47jac
+2025-09-29 20:08:08 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:08:08 - __main__ - INFO - ✅ Entorno validado correctamente
+2025-09-29 20:08:08 - __main__ - INFO - 📨 Procesando mensaje: Muestrame mis eventos de mañana
+2025-09-29 20:08:08 - agentverse.agent_handler - INFO - 📨 Procesando mensaje: 'Muestrame mis eventos de mañana...'
+2025-09-29 20:08:08 - agentverse.agent_handler - INFO - 🎯 Intención detectada: show_events
+2025-09-29 20:08:08 - agentverse.agent_handler - INFO - 📅 Procesando solicitud de mostrar eventos...
+2025-09-29 20:08:08 - calendar_service.calendar_client - INFO - Inicializando cliente de Google Calendar...
+2025-09-29 20:08:08 - calendar_service.calendar_client - INFO - 📄 Credenciales cargadas desde archivo
+2025-09-29 20:08:08 - calendar_service.calendar_client - INFO - ✅ Cliente de Google Calendar inicializado correctamente
+2025-09-29 20:08:12 - agentverse.agent_handler - INFO - 🔍 Buscando eventos para: mañana
+2025-09-29 20:08:12 - agentverse.agent_handler - INFO -    Rango: 2025-09-30T00:00:00-06:00 a 2025-09-30T23:59:59.999999-06:00
+2025-09-29 20:08:12 - calendar_service.calendar_client - INFO - 📅 Obteniendo eventos: 2025-09-30T00:00:00-06:00 - 2025-09-30T23:59:59.999999-06:00
+2025-09-29 20:08:12 - calendar_service.calendar_client - INFO - ✅ 1 eventos obtenidos
+2025-09-29 20:08:12 - agentverse.agent_handler - INFO - ✅ Mensaje procesado exitosamente
+2025-09-29 20:08:40 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:08:40 - agentverse.agent_handler - INFO - 🤖 AgentVerse Handler iniciado para agente: agent1qgalpghkvfs6fpm262y8j6vpluvzhhhdl9xx24x5wdz4lcz90ffg5z47jac
+2025-09-29 20:08:40 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:08:40 - __main__ - INFO - ✅ Entorno validado correctamente
+2025-09-29 20:08:40 - __main__ - INFO - 📨 Procesando mensaje: que agente es el que me esta respondiendo?
+2025-09-29 20:08:40 - agentverse.agent_handler - INFO - 📨 Procesando mensaje: 'que agente es el que me esta respondiendo?...'
+2025-09-29 20:08:40 - agentverse.agent_handler - INFO - 🎯 Intención detectada: unknown
+2025-09-29 20:08:40 - agentverse.agent_handler - INFO - ✅ Mensaje procesado exitosamente
+2025-09-29 20:08:49 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:08:49 - agentverse.agent_handler - INFO - 🤖 AgentVerse Handler iniciado para agente: agent1qgalpghkvfs6fpm262y8j6vpluvzhhhdl9xx24x5wdz4lcz90ffg5z47jac
+2025-09-29 20:08:49 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:08:49 - __main__ - INFO - ✅ Entorno validado correctamente
+2025-09-29 20:08:49 - __main__ - INFO - 📨 Procesando mensaje: ayuda
+2025-09-29 20:08:49 - agentverse.agent_handler - INFO - 📨 Procesando mensaje: 'ayuda...'
+2025-09-29 20:08:49 - agentverse.agent_handler - INFO - 🎯 Intención detectada: unknown
+2025-09-29 20:08:49 - agentverse.agent_handler - INFO - ✅ Mensaje procesado exitosamente
+2025-09-29 20:08:59 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:08:59 - agentverse.agent_handler - INFO - 🤖 AgentVerse Handler iniciado para agente: agent1qgalpghkvfs6fpm262y8j6vpluvzhhhdl9xx24x5wdz4lcz90ffg5z47jac
+2025-09-29 20:08:59 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:08:59 - __main__ - INFO - ✅ Entorno validado correctamente
+2025-09-29 20:09:06 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - 🤖 AgentVerse Handler iniciado para agente: agent1qgalpghkvfs6fpm262y8j6vpluvzhhhdl9xx24x5wdz4lcz90ffg5z47jac
+2025-09-29 20:09:06 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:09:06 - __main__ - INFO - ✅ Entorno validado correctamente
+2025-09-29 20:09:06 - calendar_service.calendar_client - INFO - Inicializando cliente de Google Calendar...
+2025-09-29 20:09:06 - calendar_service.calendar_client - INFO - 📄 Credenciales cargadas desde archivo
+2025-09-29 20:09:06 - calendar_service.calendar_client - INFO - ✅ Cliente de Google Calendar inicializado correctamente
+2025-09-29 20:09:06 - calendar_service.calendar_client - INFO - ℹ️ Obteniendo información del calendario: primary
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - 📨 Procesando mensaje: 'Mostrar mis eventos de esta semana...'
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - 🎯 Intención detectada: show_events
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - 📅 Procesando solicitud de mostrar eventos...
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - 🔍 Buscando eventos para: esta semana
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO -    Rango: 2025-09-29T00:00:00-06:00 a 2025-10-06T00:00:00-06:00
+2025-09-29 20:09:06 - calendar_service.calendar_client - INFO - 📅 Obteniendo eventos: 2025-09-29T00:00:00-06:00 - 2025-10-06T00:00:00-06:00
+2025-09-29 20:09:06 - calendar_service.calendar_client - INFO - ✅ 7 eventos obtenidos
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - ✅ Mensaje procesado exitosamente
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - 📨 Procesando mensaje: '¿Tengo tiempo libre mañana?...'
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - 🎯 Intención detectada: find_free_time
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - 🕐 Procesando solicitud de tiempo libre...
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - ✅ Mensaje procesado exitosamente
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - 📨 Procesando mensaje: 'Ayuda...'
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - 🎯 Intención detectada: unknown
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - ✅ Mensaje procesado exitosamente
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - 📨 Procesando mensaje: 'xyz123 comando inexistente...'
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - 🎯 Intención detectada: unknown
+2025-09-29 20:09:06 - agentverse.agent_handler - INFO - ✅ Mensaje procesado exitosamente
+2025-09-29 20:15:18 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:15:18 - agentverse.agent_handler - INFO - 🤖 AgentVerse Handler iniciado para agente: agent1qgalpghkvfs6fpm262y8j6vpluvzhhhdl9xx24x5wdz4lcz90ffg5z47jac
+2025-09-29 20:15:18 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:15:18 - __main__ - INFO - ✅ Entorno validado correctamente
+2025-09-29 20:15:18 - __main__ - INFO - 📊 Obteniendo estado del agente...
+2025-09-29 20:15:18 - calendar_service.calendar_client - INFO - Inicializando cliente de Google Calendar...
+2025-09-29 20:15:18 - calendar_service.calendar_client - INFO - 📄 Credenciales cargadas desde archivo
+2025-09-29 20:15:18 - calendar_service.calendar_client - INFO - ✅ Cliente de Google Calendar inicializado correctamente
+2025-09-29 20:15:18 - calendar_service.calendar_client - INFO - ℹ️ Obteniendo información del calendario: primary
+2025-09-29 20:15:25 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:15:25 - agentverse.agent_handler - INFO - 🤖 AgentVerse Handler iniciado para agente: agent1qgalpghkvfs6fpm262y8j6vpluvzhhhdl9xx24x5wdz4lcz90ffg5z47jac
+2025-09-29 20:15:25 - root - INFO - Sistema de logging inicializado - Nivel: INFO
+2025-09-29 20:15:25 - __main__ - INFO - ✅ Entorno validado correctamente
+2025-09-29 20:15:25 - calendar_service.calendar_client - INFO - Inicializando cliente de Google Calendar...
+2025-09-29 20:15:25 - calendar_service.calendar_client - INFO - 📄 Credenciales cargadas desde archivo
+2025-09-29 20:15:25 - calendar_service.calendar_client - INFO - ✅ Cliente de Google Calendar inicializado correctamente
+2025-09-29 20:15:25 - calendar_service.calendar_client - INFO - ℹ️ Obteniendo información del calendario: primary
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO - 📨 Procesando mensaje: 'Mostrar mis eventos de esta semana...'
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO - 🎯 Intención detectada: show_events
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO - 📅 Procesando solicitud de mostrar eventos...
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO - 🔍 Buscando eventos para: esta semana
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO -    Rango: 2025-09-29T00:00:00-06:00 a 2025-10-06T00:00:00-06:00
+2025-09-29 20:15:26 - calendar_service.calendar_client - INFO - 📅 Obteniendo eventos: 2025-09-29T00:00:00-06:00 - 2025-10-06T00:00:00-06:00
+2025-09-29 20:15:26 - calendar_service.calendar_client - INFO - ✅ 7 eventos obtenidos
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO - ✅ Mensaje procesado exitosamente
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO - 📨 Procesando mensaje: '¿Tengo tiempo libre mañana?...'
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO - 🎯 Intención detectada: find_free_time
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO - 🕐 Procesando solicitud de tiempo libre...
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO - ✅ Mensaje procesado exitosamente
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO - 📨 Procesando mensaje: 'Ayuda...'
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO - 🎯 Intención detectada: help
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO - ✅ Mensaje procesado exitosamente
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO - 📨 Procesando mensaje: 'xyz123 comando inexistente...'
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO - 🎯 Intención detectada: unknown
+2025-09-29 20:15:26 - agentverse.agent_handler - INFO - ✅ Mensaje procesado exitosamente

@@ -145,25 +145,28 @@ Comandos disponibles:
     
     # Palabras clave para identificar intenciones
     INTENT_KEYWORDS: Dict[str, List[str]] = {
-        "show_events": [
-            "mostrar", "ver", "eventos", "citas", "agenda", 
-            "qué tengo", "programado", "calendario", "mis eventos"
-        ],
-        "create_event": [
-            "crear", "agendar", "nueva cita", "reunión", 
-            "programar", "agregar evento", "nueva reunión"
-        ],
-        "delete_event": [
-            "cancelar", "eliminar", "borrar", "quitar evento"
-        ],
-        "update_event": [
-            "actualizar", "modificar", "cambiar", "mover", "reprogramar"
-        ],
-        "find_free_time": [
-            "tiempo libre", "disponible", "cuándo puedo", 
-            "espacio libre", "horario disponible"
-        ]
-    }
+    "show_events": [
+        "mostrar", "ver", "eventos", "citas", "agenda", 
+        "qué tengo", "programado", "calendario", "mis eventos"
+    ],
+    "create_event": [
+        "crear", "agendar", "nueva cita", "reunión", 
+        "programar", "agregar evento", "nueva reunión"
+    ],
+    "delete_event": [
+        "cancelar", "eliminar", "borrar", "quitar evento"
+    ],
+    "update_event": [
+        "actualizar", "modificar", "cambiar", "mover", "reprogramar"
+    ],
+    "find_free_time": [
+        "tiempo libre", "disponible", "cuándo puedo", 
+        "espacio libre", "horario disponible"
+    ],
+    "help": [
+        "ayuda", "help", "comandos", "qué puedes hacer", "opciones"
+    ]
+}
     
     # Palabras clave para fechas relativas
     DATE_KEYWORDS: Dict[str, int] = {

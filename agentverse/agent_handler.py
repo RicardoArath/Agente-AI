@@ -1,49 +1,170 @@
 """
-Correcciones para agent_handler.py - Manejo correcto de fechas
+Manejador principal de mensajes para AgentVerse
 """
-
-# Agregar estas importaciones al inicio del archivo
+import logging
 from datetime import datetime, timedelta
-import pytz
-from calendar_service.calendar_client import get_calendar_client
+from typing import Dict, List, Optional, Any
 
-# Agregar estas funciones auxiliares
-def get_week_range(tz_str: str = 'America/Mexico_City') -> tuple:
-    """Obtiene el rango de la semana actual"""
-    tz = pytz.timezone(tz_str)
-    now = datetime.now(tz)
+# Importar configuración
+from config.settings import settings
+
+# Importar cliente de calendario y funciones auxiliares
+from calendar_service.calendar_client import (
+    get_calendar_client,
+    get_week_range,
+    get_today_range,
+    get_tomorrow_range,
+    get_month_range
+)
+
+# Importar utilidades
+from utils.logger import get_logger
+from utils.exceptions import CalendarError
+
+logger = get_logger(__name__)
+
+# Inicializar
+logger.info(f"🤖 AgentVerse Handler iniciado para agente: {settings.AGENT_ID}")
+
+
+def process_user_message(message: str, context: Optional[Dict] = None) -> Dict[str, Any]:
+    """
+    Procesa un mensaje del usuario y retorna una respuesta estructurada
     
-    start_of_week = now - timedelta(days=now.weekday())
-    start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-    end_of_week = start_of_week + timedelta(days=7)
+    Args:
+        message: Mensaje del usuario
+        context: Contexto adicional opcional
+        
+    Returns:
+        Diccionario con la respuesta estructurada
+    """
+    try:
+        logger.info(f"📨 Procesando mensaje: '{message[:50]}...'")
+        
+        if context is None:
+            context = {}
+        
+        # Detectar intención del usuario
+        intent = _detect_intent(message)
+        logger.info(f"🎯 Intención detectada: {intent}")
+        
+        # Procesar según la intención
+        if intent == 'show_events':
+            response = _handle_show_events(message, context)
+        elif intent == 'create_event':
+            response = _handle_create_event(message, context)
+        elif intent == 'update_event':
+            response = _handle_update_event(message, context)
+        elif intent == 'delete_event':
+            response = _handle_delete_event(message, context)
+        elif intent == 'find_free_time':
+            response = _handle_find_free_time(message, context)
+        elif intent == 'help':
+            response = _handle_help(message, context)
+        else:
+            response = _handle_unknown_intent(message, context)
+        
+        logger.info("✅ Mensaje procesado exitosamente")
+        return response
+        
+    except Exception as e:
+        logger.error(f"❌ Error procesando mensaje: {e}")
+        return {
+            'type': 'error',
+            'success': False,
+            'message': f'Lo siento, hubo un error procesando tu solicitud: {str(e)}',
+            'error': str(e)
+        }
+
+
+def get_agent_status() -> Dict[str, Any]:
+    """
+    Obtiene el estado actual del agente
     
-    return start_of_week.isoformat(), end_of_week.isoformat()
+    Returns:
+        Diccionario con el estado del agente
+    """
+    try:
+        client = get_calendar_client()
+        health = client.health_check()
+        
+        return {
+            'status': 'operational' if health['status'] == 'healthy' else 'degraded',
+            'agent_id': settings.AGENT_ID,
+            'agent_name': settings.AGENT_NAME,
+            'version': settings.VERSION,
+            'calendar_connected': health.get('calendar_connected', False),
+            'calendar_name': health.get('calendar_name', ''),
+            'timezone': health.get('timezone', settings.DEFAULT_TIMEZONE),
+            'capabilities': [
+                'Ver eventos del calendario',
+                'Crear nuevos eventos',
+                'Actualizar eventos existentes',
+                'Eliminar eventos',
+                'Buscar tiempo libre'
+            ],
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo estado: {e}")
+        return {
+            'status': 'error',
+            'agent_id': settings.AGENT_ID,
+            'calendar_connected': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }
 
 
-def get_today_range(tz_str: str = 'America/Mexico_City') -> tuple:
-    """Obtiene el rango del día actual"""
-    tz = pytz.timezone(tz_str)
-    now = datetime.now(tz)
+# ==========================================
+# DETECCIÓN DE INTENCIÓN
+# ==========================================
+
+def _detect_intent(message: str) -> str:
+    """
+    Detecta la intención del usuario basándose en el mensaje
     
-    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+    Args:
+        message: Mensaje del usuario
+        
+    Returns:
+        Nombre de la intención detectada
+    """
+    message_lower = message.lower()
     
-    return start_of_day.isoformat(), end_of_day.isoformat()
-
-
-def get_tomorrow_range(tz_str: str = 'America/Mexico_City') -> tuple:
-    """Obtiene el rango de mañana"""
-    tz = pytz.timezone(tz_str)
-    now = datetime.now(tz)
-    tomorrow = now + timedelta(days=1)
+    # Mostrar eventos
+    if any(word in message_lower for word in settings.INTENT_KEYWORDS.get('show_events', [])):
+        return 'show_events'
     
-    start = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
-    end = tomorrow.replace(hour=23, minute=59, second=59, microsecond=999999)
+    # Crear evento
+    if any(word in message_lower for word in settings.INTENT_KEYWORDS.get('create_event', [])):
+        return 'create_event'
     
-    return start.isoformat(), end.isoformat()
+    # Actualizar evento
+    if any(word in message_lower for word in settings.INTENT_KEYWORDS.get('update_event', [])):
+        return 'update_event'
+    
+    # Eliminar evento
+    if any(word in message_lower for word in settings.INTENT_KEYWORDS.get('delete_event', [])):
+        return 'delete_event'
+    
+    # Buscar tiempo libre
+    if any(word in message_lower for word in settings.INTENT_KEYWORDS.get('find_free_time', [])):
+        return 'find_free_time'
+    
+    # Ayuda
+    if any(word in message_lower for word in settings.INTENT_KEYWORDS.get('help', [])):
+        return 'help'
+    
+    # Intención desconocida
+    return 'unknown'
 
 
-# MODIFICAR la función _handle_show_events así:
+# ==========================================
+# MANEJADORES DE INTENCIONES
+# ==========================================
+
 def _handle_show_events(message: str, context: Dict = None) -> Dict:
     """
     Maneja solicitudes para mostrar eventos del calendario
@@ -69,18 +190,7 @@ def _handle_show_events(message: str, context: Dict = None) -> Dict:
             period_text = "esta semana"
             
         elif any(word in message_lower for word in ['mes', 'month']):
-            tz = pytz.timezone('America/Mexico_City')
-            now = datetime.now(tz)
-            start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            
-            # Último día del mes
-            if now.month == 12:
-                end = start.replace(year=now.year + 1, month=1)
-            else:
-                end = start.replace(month=now.month + 1)
-            
-            time_min = start.isoformat()
-            time_max = end.isoformat()
+            time_min, time_max = get_month_range()
             period_text = "este mes"
             
         else:
@@ -144,3 +254,169 @@ def _handle_show_events(message: str, context: Dict = None) -> Dict:
             'count': 0,
             'error': str(e)
         }
+
+
+def _handle_create_event(message: str, context: Dict = None) -> Dict:
+    """
+    Maneja solicitudes para crear eventos
+    """
+    try:
+        logger.info("➕ Procesando solicitud de crear evento...")
+        
+        # TODO: Implementar lógica de creación de eventos
+        # Por ahora, retornar mensaje indicando que está en desarrollo
+        
+        return {
+            'type': 'create_event',
+            'success': False,
+            'message': 'La funcionalidad de crear eventos está en desarrollo. Por favor, intenta más tarde.',
+            'event': None
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creando evento: {e}")
+        return {
+            'type': 'create_event',
+            'success': False,
+            'message': f'No pude crear el evento: {str(e)}',
+            'error': str(e)
+        }
+
+
+def _handle_update_event(message: str, context: Dict = None) -> Dict:
+    """
+    Maneja solicitudes para actualizar eventos
+    """
+    try:
+        logger.info("✏️ Procesando solicitud de actualizar evento...")
+        
+        # TODO: Implementar lógica de actualización
+        
+        return {
+            'type': 'update_event',
+            'success': False,
+            'message': 'La funcionalidad de actualizar eventos está en desarrollo.',
+            'event': None
+        }
+        
+    except Exception as e:
+        logger.error(f"Error actualizando evento: {e}")
+        return {
+            'type': 'update_event',
+            'success': False,
+            'message': f'No pude actualizar el evento: {str(e)}',
+            'error': str(e)
+        }
+
+
+def _handle_delete_event(message: str, context: Dict = None) -> Dict:
+    """
+    Maneja solicitudes para eliminar eventos
+    """
+    try:
+        logger.info("🗑️ Procesando solicitud de eliminar evento...")
+        
+        # TODO: Implementar lógica de eliminación
+        
+        return {
+            'type': 'delete_event',
+            'success': False,
+            'message': 'La funcionalidad de eliminar eventos está en desarrollo.',
+            'deleted': False
+        }
+        
+    except Exception as e:
+        logger.error(f"Error eliminando evento: {e}")
+        return {
+            'type': 'delete_event',
+            'success': False,
+            'message': f'No pude eliminar el evento: {str(e)}',
+            'error': str(e)
+        }
+
+
+def _handle_find_free_time(message: str, context: Dict = None) -> Dict:
+    """
+    Maneja solicitudes para buscar tiempo libre
+    """
+    try:
+        logger.info("🕐 Procesando solicitud de tiempo libre...")
+        
+        # TODO: Implementar lógica de búsqueda de tiempo libre
+        
+        return {
+            'type': 'free_time',
+            'success': False,
+            'message': 'La funcionalidad de buscar tiempo libre está en desarrollo.',
+            'free_slots': []
+        }
+        
+    except Exception as e:
+        logger.error(f"Error buscando tiempo libre: {e}")
+        return {
+            'type': 'free_time',
+            'success': False,
+            'message': f'No pude buscar tiempo libre: {str(e)}',
+            'error': str(e)
+        }
+
+
+def _handle_help(message: str, context: Dict = None) -> Dict:
+    """
+    Maneja solicitudes de ayuda
+    """
+    help_text = f"""
+¡Hola! Soy tu asistente de calendario. Puedo ayudarte con:
+
+📅 Ver eventos:
+   • "Mostrar mis eventos de esta semana"
+   • "¿Qué tengo programado para hoy?"
+   • "Ver mi agenda del mes"
+
+➕ Crear eventos:
+   • "Crear una reunión mañana a las 2pm"
+   • "Agendar cita con el doctor el viernes"
+
+✏️ Actualizar eventos:
+   • "Mover mi reunión de las 2pm a las 3pm"
+   • "Cambiar el título de mi cita"
+
+🗑️ Eliminar eventos:
+   • "Cancelar mi cita de las 3pm"
+   • "Eliminar la reunión de mañana"
+
+🕐 Buscar tiempo libre:
+   • "¿Tengo tiempo libre mañana?"
+   • "Buscar 2 horas libres esta semana"
+
+¿En qué puedo ayudarte?
+    """
+    
+    return {
+        'type': 'help',
+        'success': True,
+        'message': help_text.strip(),
+        'capabilities': [
+            'show_events',
+            'create_event',
+            'update_event',
+            'delete_event',
+            'find_free_time'
+        ]
+    }
+
+
+def _handle_unknown_intent(message: str, context: Dict = None) -> Dict:
+    """
+    Maneja mensajes con intención desconocida
+    """
+    return {
+        'type': 'unknown',
+        'success': False,
+        'message': 'No entendí tu solicitud. Escribe "ayuda" para ver qué puedo hacer.',
+        'suggestions': [
+            'Mostrar mis eventos de esta semana',
+            '¿Qué tengo programado para hoy?',
+            'Ayuda'
+        ]
+    }
