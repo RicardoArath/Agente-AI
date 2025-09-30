@@ -1,0 +1,49 @@
+# Core Google APIs
+google-api-python-client==2.108.0
+google-auth==2.23.4
+google-auth-oauthlib==1.1.0
+google-auth-httplib2==0.1.1
+
+# HTTP and requests
+requests==2.31.0
+urllib3==2.0.7
+
+# Date and time handling  
+python-dateutil==2.8.2
+pytz==2023.3
+
+# Data processing
+pydantic==2.5.0
+typing-extensions==4.8.0
+
+# Natural Language Processing (opcional, para mejorar el parsing)
+# spacy==3.7.2
+# nltk==3.8.1
+
+# Logging y debugging
+colorlog==6.8.0
+
+# Testing (opcional)
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+
+# Development tools (opcional)
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1
+
+# Environment management
+python-dotenv==1.0.0
+
+# JSON handling
+orjson==3.9.10
+
+# Caching (opcional, para optimización)
+cachetools==5.3.2
+
+# Rate limiting (opcional)
+ratelimit==2.2.1
+
+# Rich formatting para CLI (opcional)
+rich==13.7.0
