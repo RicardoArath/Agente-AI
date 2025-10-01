@@ -259,4 +259,303 @@ MIT License - ver archivo `LICENSE` para detalles.
 
 ---
 
-**Desarrollado con ❤️ para AgentVerse**
+# 📚 Sistema de Gestión de Normas Académicas
+
+## Nueva Funcionalidad Agregada
+
+Este sistema ahora incluye un módulo inteligente para gestionar situaciones académicas y disciplinarias de forma empática y automatizada.
+
+## 🎯 Características Principales
+
+### 1. **Análisis Inteligente de Mensajes**
+- Procesa mensajes de estudiantes usando NLP
+- Identifica automáticamente el tipo y gravedad de la falta
+- Clasifica en normas menores y graves
+
+### 2. **Respuestas Personalizadas**
+- Mensajes empáticos, comprensivos y amorosos
+- Tono humano, no robotizado
+- Adaptados a la gravedad de cada situación
+
+### 3. **Gestión Automática**
+
+#### Para Faltas Menores:
+- ✉️ Envío de notificación (impresa en consola)
+- 📋 Explicación clara de consecuencias
+- ✅ Indicaciones sobre qué debe hacer el estudiante
+
+#### Para Faltas Graves:
+- 📅 Agendamiento automático de cita
+- 🔍 Búsqueda de espacios libres en Google Calendar
+- 🗓️ Creación de evento en el calendario
+- 📧 Notificación con detalles de la cita
+
+## 📁 Estructura de Archivos
+
+```
+calendar_agent/
+├── normas/
+│   ├── __init__.py                    # Módulo de normas
+│   └── normas_processor.py            # Procesador principal
+├── config/
+│   └── normas_config.py               # Configuración de normas
+├── tests/
+│   └── test_normas.py                 # Tests unitarios
+├── normas.json                        # Base de datos de normas
+├── main.py                            # Punto de entrada modificado
+└── README_NORMAS.md                   # Esta documentación
+```
+
+## 🚀 Instalación y Configuración
+
+### 1. Asegúrate de tener las dependencias instaladas
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Coloca el archivo `normas.json` en la raíz del proyecto
+
+El archivo ya está configurado con ejemplos de normas menores y graves.
+
+### 3. Configura variables de entorno (opcional)
+
+Crea o actualiza tu archivo `.env`:
+
+```bash
+# Configuración de normas
+NORMAS_FILE=normas.json
+DIAS_BUSQUEDA_CITA=7
+DURACION_CITA_MINUTOS=30
+HORARIO_INICIO=08:00
+HORARIO_FIN=16:00
+
+# Información de contacto
+NOMBRE_DIRECTORA=Dirección Académica
+EMAIL_DIRECTORA=direccion@escuela.edu.mx
+
+# Logging
+LOG_NORMAS_PROCESADAS=True
+```
+
+## 💻 Uso del Sistema
+
+### Modo Interactivo
+
+```bash
+python main.py --interactive
+```
+
+Ejemplo de interacción:
+```
+Estudiante: Hola, llegué tarde a clase hoy
+🤖 Directora: [Mensaje empático con consecuencias y acciones a seguir]
+```
+
+### Procesar Mensaje Único
+
+```bash
+python main.py --message "Copié en el examen" --user "Juan Pérez"
+```
+
+### Ver Estado del Sistema
+
+```bash
+python main.py --status
+```
+
+Muestra:
+- Estado del agente
+- Conexión con Google Calendar
+- Cantidad de normas cargadas
+
+### Ejecutar Tests
+
+```bash
+python main.py --test
+```
+
+O con pytest:
+```bash
+pytest tests/test_normas.py -v
+```
+
+## 📋 Ejemplos de Uso
+
+### Ejemplo 1: Falta Menor (Retardo)
+
+**Entrada:**
+```
+"Llegué tarde a clase, fueron como 10 minutos"
+```
+
+**Salida:**
+```
+📧 NOTIFICACIÓN POR CORREO ELECTRÓNICO
+===============================================
+Para: estudiante
+Asunto: Sobre tu situación - Puntualidad
+
+Hola estudiante,
+
+Gracias por ser honesto y comunicarte conmigo sobre
+la situación de puntualidad.
+
+Entiendo que todos cometemos errores y lo importante
+es aprender de ellos...
+
+[Consecuencias y acciones a seguir]
+```
+
+### Ejemplo 2: Falta Grave (Falta de Respeto)
+
+**Entrada:**
+```
+"Le grité a mi compañero y le dije cosas ofensivas"
+```
+
+**Salida:**
+```
+📧 NOTIFICACIÓN DE CITA AGENDADA
+===============================================
+Entiendo que a veces las emociones pueden llevarnos
+a actuar de formas que no representan quién realmente
+somos...
+
+📅 Tu cita ha sido agendada para:
+Lunes 07 de octubre a las 10:00 AM
+
+📍 Ubicación: Oficina de Dirección
+⏱️ Duración: 30 minutos
+```
+
+## 🔧 Personalización
+
+### Agregar Nuevas Normas
+
+Edita `normas.json` y agrega nuevas normas en las secciones correspondientes:
+
+```json
+{
+  "normas_menores": [
+    {
+      "id": "NM006",
+      "categoria": "Nueva Categoría",
+      "descripcion": "Descripción de la falta",
+      "gravedad": 1,
+      "keywords": ["palabra1", "palabra2"],
+      "consecuencia": "Lo que sucederá...",
+      "accion_alumno": "Lo que debe hacer..."
+    }
+  ]
+}
+```
+
+### Modificar Umbrales
+
+En `config/normas_config.py`:
+
+```python
+# Cambiar qué gravedad requiere cita
+UMBRAL_GRAVEDAD_CITA = 3
+
+# Cambiar días de búsqueda de citas
+DIAS_BUSQUEDA_CITA = 14
+
+# Cambiar duración de citas
+DURACION_CITA_DEFAULT = 45
+```
+
+### Personalizar Mensajes
+
+Los mensajes se generan en:
+- `normas_processor.py` → método `_generar_mensaje_menor()`
+- `main.py` → función `manejar_falta_grave()`
+
+## 🧪 Testing
+
+El sistema incluye tests completos:
+
+```bash
+# Tests unitarios
+pytest tests/test_normas.py::TestNormasProcessor -v
+
+# Tests de integración
+pytest tests/test_normas.py::TestIntegracionNormas -v
+
+# Tests con cobertura
+pytest tests/test_normas.py --cov=normas --cov-report=html
+```
+
+## 📊 Flujo del Sistema
+
+```
+Mensaje del Estudiante
+         ↓
+    Análisis NLP
+         ↓
+  ¿Contiene keywords de normas?
+         ↓
+    Sí         No
+    ↓          ↓
+Identificar   Procesamiento
+Norma       normal (calendario)
+    ↓
+¿Es grave?
+    ↓
+Sí          No
+↓           ↓
+Buscar      Generar
+Espacio     Mensaje
+Libre       Simple
+↓           ↓
+Agendar     Mostrar en
+Cita        Consola
+↓           ↓
+Notificar   Notificar
+```
+
+## 🛠️ Troubleshooting
+
+### Error: "No se encontró el archivo de normas"
+**Solución:** Asegúrate de que `normas.json` esté en la raíz del proyecto.
+
+### Error: "No se encontraron espacios disponibles"
+**Solución:** 
+1. Verifica que Google Calendar esté conectado
+2. Aumenta `DIAS_BUSQUEDA_CITA` en la configuración
+3. Revisa que el horario de atención sea correcto
+
+### Las normas no se identifican correctamente
+**Solución:**
+1. Revisa las keywords en `normas.json`
+2. Ajusta `UMBRAL_MATCH_MINIMO` en la configuración
+3. Agrega más keywords variadas
+
+## 📝 Notas Importantes
+
+1. **Correos:** Actualmente se muestran en consola. Para enviarlos realmente, integra un servicio como SendGrid o Gmail API.
+
+2. **Privacidad:** Los datos de estudiantes se manejan con confidencialidad. Asegúrate de cumplir con regulaciones de protección de datos.
+
+3. **Backup:** Realiza backups regulares de `normas.json` y los logs.
+
+## 🔜 Futuras Mejoras
+
+- [ ] Envío real de correos electrónicos
+- [ ] Dashboard web para ver estadísticas
+- [ ] Notificaciones a padres/tutores
+- [ ] Historial de incidencias por estudiante
+- [ ] Reportes automáticos mensuales
+- [ ] Integración con sistema escolar existente
+
+## 📞 Soporte
+
+Para dudas o problemas:
+1. Revisa los logs en `logs/calendar_agent.log`
+2. Ejecuta `python main.py --status` para diagnosticar
+3. Consulta la documentación de AgentVerse
+
+---
+
+**Desarrollado con ❤️ para crear un entorno escolar más comprensivo y eficiente**

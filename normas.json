@@ -1,0 +1,130 @@
+{
+  "normas_menores": [
+    {
+      "id": "NM001",
+      "categoria": "Puntualidad",
+      "descripcion": "Llegar tarde a clase (menos de 10 minutos)",
+      "gravedad": 1,
+      "keywords": ["tarde", "retardo", "llegué tarde", "me retrasé"],
+      "consecuencia": "Advertencia verbal y registro en el sistema. Si acumulas 3 retardos en el mes, se procederá a una llamada a tus padres/tutores.",
+      "accion_alumno": "Deberás presentarte 15 minutos antes del inicio de clases durante la próxima semana para demostrar tu compromiso con la puntualidad."
+    },
+    {
+      "id": "NM002",
+      "categoria": "Uniforme",
+      "descripcion": "No portar el uniforme completo o correctamente",
+      "gravedad": 1,
+      "keywords": ["uniforme", "no traigo uniforme", "sin uniforme", "ropa incorrecta"],
+      "consecuencia": "Advertencia y registro. Se te proporcionará un uniforme temporal si está disponible. Deberás traer una nota firmada por tus padres al día siguiente.",
+      "accion_alumno": "Presentarte mañana con el uniforme completo y una nota firmada por tus padres explicando la situación."
+    },
+    {
+      "id": "NM003",
+      "categoria": "Material escolar",
+      "descripcion": "Olvidar material o tarea",
+      "gravedad": 1,
+      "keywords": ["olvidé", "no traje", "sin tarea", "sin material", "no hice la tarea"],
+      "consecuencia": "La tarea o actividad deberá ser entregada al día siguiente con un 20% de descuento en la calificación. Dos faltas consecutivas requerirán reunión con el profesor.",
+      "accion_alumno": "Entregar la tarea o conseguir el material faltante para la siguiente clase. Organiza tu mochila la noche anterior para evitar olvidos."
+    },
+    {
+      "id": "NM004",
+      "categoria": "Comportamiento en clase",
+      "descripcion": "Interrumpir la clase o distraer a compañeros de forma leve",
+      "gravedad": 2,
+      "keywords": ["hablando en clase", "interrumpí", "molestando", "distraído", "platicando"],
+      "consecuencia": "Cambio de lugar en el salón y registro de conducta. Si el comportamiento continúa, se solicitará una reunión con tus padres.",
+      "accion_alumno": "Escribir una reflexión de media página sobre la importancia del respeto en el aula y comprometerte a mantener un ambiente de aprendizaje positivo."
+    },
+    {
+      "id": "NM005",
+      "categoria": "Uso de dispositivos",
+      "descripcion": "Uso no autorizado de celular o dispositivos electrónicos",
+      "gravedad": 2,
+      "keywords": ["celular", "teléfono", "usando el celular", "dispositivo", "tablet"],
+      "consecuencia": "El dispositivo será retenido temporalmente y entregado a tus padres/tutores al final del día escolar. Registro en tu expediente.",
+      "accion_alumno": "Entregar voluntariamente tu dispositivo al inicio de cada clase durante una semana para demostrar que puedes estar enfocado sin distracciones."
+    }
+  ],
+  "normas_graves": [
+    {
+      "id": "NG001",
+      "categoria": "Respeto y convivencia",
+      "descripcion": "Falta de respeto verbal hacia compañeros o personal escolar",
+      "gravedad": 3,
+      "keywords": ["insulté", "le grité", "falta de respeto", "grosero", "le hablé mal", "palabras ofensivas"],
+      "consecuencia": "Esta situación requiere una conversación personal para entender lo sucedido y trabajar juntos en una solución. Se agendará una reunión donde podremos hablar con calma y buscar la mejor manera de resolver esto.",
+      "requiere_cita": true,
+      "mensaje_estudiante": "Entiendo que a veces las emociones pueden llevarnos a actuar de formas que no representan quién realmente somos. Me gustaría que conversemos sobre lo que pasó para poder apoyarte mejor. He agendado un espacio para que podamos hablar con tranquilidad."
+    },
+    {
+      "id": "NG002",
+      "categoria": "Integridad académica",
+      "descripcion": "Copia o plagio en exámenes o trabajos",
+      "gravedad": 4,
+      "keywords": ["copié", "plagio", "trampa", "copié en el examen", "acordeón", "me copiaron"],
+      "consecuencia": "Este es un tema serio que necesitamos abordar con cuidado. Es importante hablar sobre la integridad académica y cómo podemos ayudarte a desarrollar tus habilidades sin necesidad de copiar.",
+      "requiere_cita": true,
+      "mensaje_estudiante": "Valoro mucho tu honestidad al compartir esto conmigo. La integridad académica es fundamental, y quiero entender qué situación te llevó a tomar esta decisión. Tengamos una conversación para ver cómo puedo apoyarte mejor en tu proceso de aprendizaje."
+    },
+    {
+      "id": "NG003",
+      "categoria": "Acoso o bullying",
+      "descripcion": "Participación en acoso escolar, ciberacoso o intimidación",
+      "gravedad": 5,
+      "keywords": ["bullying", "acoso", "intimidé", "amenacé", "hostigué", "molestando repetidamente"],
+      "consecuencia": "Esta es una situación muy seria que afecta el bienestar de toda nuestra comunidad. Necesitamos hablar urgentemente sobre esto para proteger a todos los involucrados y encontrar una solución.",
+      "requiere_cita": true,
+      "mensaje_estudiante": "Me preocupa mucho lo que me cuentas, y es muy valiente de tu parte compartirlo. El respeto y la seguridad de cada estudiante es mi prioridad. Necesito que conversemos lo antes posible para entender la situación completa y asegurarnos de que todos estén bien. Tu bienestar y el de tus compañeros es lo más importante."
+    },
+    {
+      "id": "NG004",
+      "categoria": "Violencia física",
+      "descripcion": "Agresión física o pelea",
+      "gravedad": 5,
+      "keywords": ["pelea", "golpee", "golpeé", "empujé", "agresión", "pegué", "me peleé"],
+      "consecuencia": "La violencia física es inaceptable en nuestra escuela. Esta situación requiere atención inmediata para garantizar la seguridad de todos y ayudarte a encontrar mejores formas de manejar conflictos.",
+      "requiere_cita": true,
+      "mensaje_estudiante": "Entiendo que las situaciones difíciles pueden hacer que reaccionemos de formas que luego lamentamos. Es importante que hablemos sobre lo que sucedió para entender qué te llevó a esto y cómo podemos ayudarte a manejar estos momentos de otra manera. He apartado un tiempo para que conversemos en un ambiente seguro."
+    },
+    {
+      "id": "NG005",
+      "categoria": "Sustancias prohibidas",
+      "descripcion": "Posesión, consumo o distribución de sustancias prohibidas",
+      "gravedad": 5,
+      "keywords": ["drogas", "alcohol", "sustancias", "fumando", "bebiendo"],
+      "consecuencia": "Esta es una situación muy delicada que requiere apoyo profesional. Tu salud y bienestar son lo más importante, y necesitamos hablar sobre cómo podemos ayudarte.",
+      "requiere_cita": true,
+      "mensaje_estudiante": "Gracias por confiar en mí para compartir esto. Tu bienestar es mi mayor preocupación, y quiero que sepas que estoy aquí para apoyarte, no para juzgarte. Necesitamos conversar sobre la mejor manera de ayudarte en esta situación. He agendado un tiempo para que podamos hablar con privacidad y buscar juntos las mejores opciones de apoyo."
+    },
+    {
+      "id": "NG006",
+      "categoria": "Daño a propiedad",
+      "descripcion": "Vandalismo o daño intencional a instalaciones o propiedad",
+      "gravedad": 4,
+      "keywords": ["rompí", "dañé", "vandalismo", "destruí", "rayé", "grafiti"],
+      "consecuencia": "Necesitamos hablar sobre lo que pasó y encontrar una manera de reparar el daño, tanto físicamente como en términos de responsabilidad personal.",
+      "requiere_cita": true,
+      "mensaje_estudiante": "Aprecio que me lo hayas contado. Dañar nuestras instalaciones afecta a toda la comunidad escolar. Me gustaría entender qué motivó esta acción y trabajar contigo en un plan para reparar el daño y aprender de esta experiencia. Conversemos sobre cómo podemos resolver esto de manera constructiva."
+    },
+    {
+      "id": "NG007",
+      "categoria": "Seguridad escolar",
+      "descripcion": "Falsificación de documentos o firmas",
+      "gravedad": 4,
+      "keywords": ["falsifiqué", "firma falsa", "documento falso", "falsificación"],
+      "consecuencia": "La confianza es fundamental en nuestra comunidad. Esta acción requiere que conversemos sobre la importancia de la honestidad y las consecuencias de nuestras decisiones.",
+      "requiere_cita": true,
+      "mensaje_estudiante": "Entiendo que a veces nos sentimos presionados y tomamos decisiones de las que luego nos arrepentimos. Es importante que hablemos sobre esto para entender qué te llevó a tomar esta acción y cómo podemos ayudarte a enfrentar situaciones difíciles de manera honesta en el futuro."
+    }
+  ],
+  "configuracion": {
+    "umbral_gravedad_cita": 3,
+    "duracion_cita_minutos": 30,
+    "horario_atencion": {
+      "dias": ["lunes", "martes", "miércoles", "jueves", "viernes"],
+      "hora_inicio": "08:00",
+      "hora_fin": "16:00"
+    }
+  }
+}
