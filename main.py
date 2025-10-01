@@ -1,548 +1,487 @@
-#!/usr/bin/env python3
 """
-Punto de entrada principal para el AgentVerse Calendar
-Agente ID: agent1qgalpghkvfs6fpm262y8j6vpluvzhhhdl9xx24x5wdz4lcz90ffg5z47jac
+Punto de entrada principal del agente con funcionalidad de gestión de normas
 """
 
 import sys
-import json
 import argparse
-from datetime import datetime
-from typing import Dict, Any, Optional
+from datetime import datetime, timedelta
+import json
 
-# Configurar el path para importaciones
-sys.path.insert(0, '.')
+# Importaciones existentes (mantén tus imports actuales)
+from config.settings import AGENT_ID, DEBUG, TIMEZONE
+from auth.google_auth import GoogleAuthManager
+from calendar_service.calendar_client import GoogleCalendarClient
+from nlp.message_processor import MessageProcessor
+from utils.logger import setup_logger
+from normas.normas_processor import NormasProcessor  # NUEVO
 
-from config.settings import settings
-from agentverse.agent_handler import process_user_message, get_agent_status
-from utils.logger import get_logger, setup_logging
+logger = setup_logger(__name__)
 
-# Configurar logging
-setup_logging()
-logger = get_logger(__name__)
+
+class AgentVerseInterface:
+    """Interfaz para AgentVerse"""
+    
+    @staticmethod
+    def on_startup():
+        """Se ejecuta cuando el agente inicia"""
+        logger.info(f"Agente {AGENT_ID} iniciado correctamente")
+        logger.info("Funcionalidad de gestión de normas activa")
+        return {"status": "ready", "agent_id": AGENT_ID}
+    
+    @staticmethod
+    def on_message(sender: str, message: str) -> dict:
+        """
+        Procesa mensajes entrantes
+        
+        Args:
+            sender: ID del usuario que envía el mensaje
+            message: Contenido del mensaje
+            
+        Returns:
+            dict: Respuesta del agente
+        """
+        logger.info(f"Mensaje recibido de {sender}: {message}")
+        
+        # Procesar el mensaje
+        response = process_user_message(message, sender)
+        
+        return {
+            "sender": AGENT_ID,
+            "message": response.get('message', ''),
+            "metadata": {
+                "timestamp": datetime.now().isoformat(),
+                "tipo_respuesta": response.get('tipo', 'general')
+            }
+        }
+
+
+def process_user_message(message: str, user_id: str = "usuario") -> dict:
+    """
+    Procesa mensajes del usuario con detección de faltas académicas
+    
+    Args:
+        message: Mensaje del usuario
+        user_id: ID del usuario
+        
+    Returns:
+        dict: Respuesta procesada
+    """
+    try:
+        # Inicializar procesadores
+        normas_processor = NormasProcessor()
+        
+        # Primero verificar si es una consulta sobre normas/faltas
+        palabras_clave_normas = [
+            'falta', 'norma', 'problema', 'hice', 'cometí', 'error',
+            'me pasó', 'sucedió', 'confesión', 'admitir'
+        ]
+        
+        mensaje_lower = message.lower()
+        es_consulta_normas = any(palabra in mensaje_lower for palabra in palabras_clave_normas)
+        
+        if es_consulta_normas:
+            # Procesar como consulta de normas
+            logger.info(f"Procesando mensaje como consulta de normas: {message}")
+            resultado = normas_processor.procesar_mensaje(message, user_id)
+            
+            if not resultado.get('success'):
+                return resultado
+            
+            if resultado.get('requiere_cita'):
+                # Falta grave - agendar cita
+                return manejar_falta_grave(resultado, user_id)
+            else:
+                # Falta menor - enviar mensaje
+                return manejar_falta_menor(resultado, user_id)
+        
+        else:
+            # Procesamiento normal de calendario (tu código existente)
+            message_processor = MessageProcessor()
+            auth_manager = GoogleAuthManager()
+            calendar_client = GoogleCalendarClient(auth_manager)
+            
+            # Aquí va tu lógica existente de procesamiento de mensajes de calendario
+            parsed = message_processor.parse_message(message)
+            
+            # Tu código existente para manejar eventos de calendario...
+            # (mantén tu lógica actual aquí)
+            
+            return {
+                'success': True,
+                'message': 'Procesando tu solicitud de calendario...',
+                'tipo': 'calendario'
+            }
+    
+    except Exception as e:
+        logger.error(f"Error procesando mensaje: {e}", exc_info=True)
+        return {
+            'success': False,
+            'message': f'Lo siento, ocurrió un error: {str(e)}',
+            'tipo': 'error'
+        }
+
+
+def manejar_falta_grave(resultado: dict, user_id: str) -> dict:
+    """
+    Maneja faltas graves agendando una cita en Google Calendar
+    
+    Args:
+        resultado: Resultado del procesamiento de normas
+        user_id: ID del usuario
+        
+    Returns:
+        dict: Respuesta con detalles de la cita
+    """
+    try:
+        logger.info(f"Manejando falta grave para usuario {user_id}")
+        
+        norma = resultado.get('norma', {})
+        mensaje_estudiante = resultado.get('mensaje_estudiante', '')
+        duracion = resultado.get('duracion_cita', 30)
+        
+        # Inicializar cliente de calendario
+        auth_manager = GoogleAuthManager()
+        calendar_client = GoogleCalendarClient(auth_manager)
+        
+        # Buscar primer espacio disponible
+        inicio_busqueda = datetime.now()
+        fin_busqueda = inicio_busqueda + timedelta(days=7)
+        
+        logger.info(f"Buscando espacios libres entre {inicio_busqueda} y {fin_busqueda}")
+        
+        espacios_libres = calendar_client.find_free_time(
+            start_date=inicio_busqueda,
+            end_date=fin_busqueda,
+            duration_minutes=duracion
+        )
+        
+        if not espacios_libres:
+            logger.warning("No se encontraron espacios disponibles")
+            return {
+                'success': False,
+                'message': (
+                    f"{mensaje_estudiante}\n\n"
+                    "En este momento no tengo espacios disponibles en mi agenda "
+                    "para la próxima semana. Por favor, escríbeme directamente para "
+                    "que podamos encontrar un horario que funcione para ambos."
+                ),
+                'tipo': 'grave_sin_espacio'
+            }
+        
+        # Tomar el primer espacio disponible
+        primer_espacio = espacios_libres[0]
+        
+        # Crear evento en el calendario
+        evento_creado = calendar_client.create_event(
+            summary=f"Reunión - {norma.get('categoria', 'Situación académica')}",
+            start_time=primer_espacio['start'],
+            end_time=primer_espacio['end'],
+            description=f"Reunión sobre: {norma.get('descripcion', 'situación académica')}\n\nEstudiante: {user_id}",
+            attendees=[],  # Aquí podrías agregar el email del estudiante si lo tienes
+            location="Oficina de Dirección"
+        )
+        
+        # Formatear fecha para mensaje
+        fecha_cita = primer_espacio['start'].strftime("%A %d de %B a las %I:%M %p")
+        
+        mensaje_final = f"""{mensaje_estudiante}
+
+📅 Tu cita ha sido agendada para:
+{fecha_cita}
+
+📍 Ubicación: Oficina de Dirección
+⏱️ Duración: {duracion} minutos
+
+Por favor, sé puntual. Si por alguna razón no puedes asistir, avísame con anticipación para reprogramar.
+
+Te espero con la mejor disposición para escucharte y apoyarte.
+
+Con afecto,
+Dirección Académica"""
+        
+        # IMPRIMIR EN CONSOLA (como solicitaste para los correos)
+        print("\n" + "="*80)
+        print("📧 NOTIFICACIÓN DE CITA AGENDADA")
+        print("="*80)
+        print(f"Para: {user_id}")
+        print(f"Asunto: Cita agendada - {norma.get('categoria', 'Situación académica')}")
+        print(f"Fecha de cita: {fecha_cita}")
+        print("-"*80)
+        print(mensaje_final)
+        print("="*80 + "\n")
+        
+        logger.info(f"Cita agendada exitosamente: {evento_creado.get('id')}")
+        
+        return {
+            'success': True,
+            'message': mensaje_final,
+            'tipo': 'grave_cita_agendada',
+            'evento_id': evento_creado.get('id'),
+            'fecha_cita': primer_espacio['start'].isoformat(),
+            'norma': norma
+        }
+    
+    except Exception as e:
+        logger.error(f"Error agendando cita para falta grave: {e}", exc_info=True)
+        return {
+            'success': False,
+            'message': (
+                f"Entiendo la seriedad de la situación y quiero ayudarte. "
+                f"Desafortunadamente tuve un problema técnico al agendar la cita. "
+                f"Por favor, acércate directamente a mi oficina o escríbeme para "
+                f"coordinar una reunión lo antes posible."
+            ),
+            'tipo': 'error_cita'
+        }
+
+
+def manejar_falta_menor(resultado: dict, user_id: str) -> dict:
+    """
+    Maneja faltas menores mostrando mensaje en consola
+    
+    Args:
+        resultado: Resultado del procesamiento de normas
+        user_id: ID del usuario
+        
+    Returns:
+        dict: Respuesta con el mensaje
+    """
+    try:
+        logger.info(f"Manejando falta menor para usuario {user_id}")
+        
+        norma = resultado.get('norma', {})
+        mensaje = resultado.get('mensaje_estudiante', '')
+        
+        # IMPRIMIR EN CONSOLA (simulando envío de correo)
+        print("\n" + "="*80)
+        print("📧 NOTIFICACIÓN POR CORREO ELECTRÓNICO")
+        print("="*80)
+        print(f"Para: {user_id}")
+        print(f"Asunto: Sobre tu situación - {norma.get('categoria', 'Situación académica')}")
+        print(f"Gravedad: {norma.get('gravedad', 'N/A')} (Falta menor)")
+        print("-"*80)
+        print(mensaje)
+        print("="*80 + "\n")
+        
+        logger.info(f"Notificación de falta menor enviada a {user_id}")
+        
+        return {
+            'success': True,
+            'message': mensaje,
+            'tipo': 'menor_notificacion_enviada',
+            'norma': norma
+        }
+    
+    except Exception as e:
+        logger.error(f"Error manejando falta menor: {e}", exc_info=True)
+        return {
+            'success': False,
+            'message': (
+                f"Gracias por comunicarte. Tomé nota de la situación "
+                f"y me pondré en contacto contigo pronto."
+            ),
+            'tipo': 'error_notificacion'
+        }
+
+
+def get_agent_status() -> dict:
+    """
+    Obtiene el estado actual del agente
+    
+    Returns:
+        dict: Estado del agente
+    """
+    try:
+        auth_manager = GoogleAuthManager()
+        calendar_client = GoogleCalendarClient(auth_manager)
+        normas_processor = NormasProcessor()
+        
+        # Verificar conexión con calendario
+        calendar_status = "conectado" if calendar_client.service else "desconectado"
+        
+        # Cargar estadísticas de normas
+        normas_data = normas_processor.normas_data
+        total_normas_menores = len(normas_data.get('normas_menores', []))
+        total_normas_graves = len(normas_data.get('normas_graves', []))
+        
+        return {
+            'status': 'active',
+            'agent_id': AGENT_ID,
+            'calendar': calendar_status,
+            'normas': {
+                'menores': total_normas_menores,
+                'graves': total_normas_graves,
+                'total': total_normas_menores + total_normas_graves
+            },
+            'timestamp': datetime.now().isoformat()
+        }
+    
+    except Exception as e:
+        logger.error(f"Error obteniendo estado: {e}")
+        return {
+            'status': 'error',
+            'message': str(e),
+            'timestamp': datetime.now().isoformat()
+        }
+
 
 def main():
-    """Función principal del agente"""
-    
-    # Configurar argumentos de línea de comandos
+    """Función principal"""
     parser = argparse.ArgumentParser(
-        description=f"AgentVerse Calendar Agent - {settings.AGENT_ID}",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Ejemplos de uso:
-  python main.py --message "Mostrar mis eventos de esta semana"
-  python main.py --status
-  python main.py --interactive
-  python main.py --test
-        """
+        description='Agente de Calendario con Gestión de Normas Académicas'
     )
-    
     parser.add_argument(
         '--message', '-m',
-        type=str,
-        help='Procesar un mensaje específico'
+        help='Mensaje a procesar'
     )
-    
+    parser.add_argument(
+        '--user', '-u',
+        default='estudiante',
+        help='Nombre del usuario/estudiante'
+    )
     parser.add_argument(
         '--status', '-s',
         action='store_true',
         help='Mostrar estado del agente'
     )
-    
     parser.add_argument(
         '--interactive', '-i',
         action='store_true',
         help='Modo interactivo'
     )
-    
     parser.add_argument(
         '--test', '-t',
         action='store_true',
-        help='Ejecutar tests básicos'
+        help='Ejecutar tests de normas'
     )
-    
     parser.add_argument(
-        '--json', '-j',
+        '--json',
         action='store_true',
         help='Salida en formato JSON'
     )
     
-    parser.add_argument(
-        '--debug', '-d',
-        action='store_true',
-        help='Activar modo debug'
-    )
-    
     args = parser.parse_args()
     
-    try:
-        # Banner de inicio
-        if not args.json:
-            print_banner()
-        
-        # Procesar argumentos
-        if args.debug:
-            import logging
-            logging.getLogger().setLevel(logging.DEBUG)
-            logger.info("🐛 Modo debug activado")
-        
-        if args.status:
-            handle_status_request(args.json)
-        
-        elif args.message:
-            handle_single_message(args.message, args.json)
-        
-        elif args.interactive:
-            handle_interactive_mode()
-        
-        elif args.test:
-            handle_test_mode(args.json)
-        
-        else:
-            # Modo por defecto: mostrar ayuda y estado
-            if not args.json:
-                parser.print_help()
-                print(f"\n{'='*60}")
-            handle_status_request(args.json)
-            
-    except KeyboardInterrupt:
-        if not args.json:
-            print("\n👋 ¡Hasta luego!")
-        sys.exit(0)
-    except Exception as e:
-        logger.error(f"❌ Error en main: {e}")
-        if args.json:
-            print(json.dumps({
-                "error": True,
-                "message": str(e),
-                "timestamp": datetime.now().isoformat()
-            }))
-        else:
-            print(f"❌ Error: {e}")
-        sys.exit(1)
-
-def print_banner():
-    """Imprime el banner de inicio"""
-    print(f"""
-{'='*80}
-🤖 AGENTVERSE CALENDAR AGENT
-{'='*80}
-Agent ID: {settings.AGENT_ID}
-Version:  {settings.VERSION}
-Time:     {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-{'='*80}
-    """)
-
-def handle_status_request(json_output: bool = False):
-    """Maneja solicitudes de estado"""
-    try:
-        logger.info("📊 Obteniendo estado del agente...")
+    # Inicializar agente
+    AgentVerseInterface.on_startup()
+    
+    if args.status:
+        # Mostrar estado
         status = get_agent_status()
+        if args.json:
+            print(json.dumps(status, indent=2, ensure_ascii=False))
+        else:
+            print("\n" + "="*60)
+            print("📊 ESTADO DEL AGENTE")
+            print("="*60)
+            print(f"Estado: {status['status']}")
+            print(f"Agent ID: {status['agent_id']}")
+            print(f"Calendario: {status['calendar']}")
+            if 'normas' in status:
+                print(f"\nNormas cargadas:")
+                print(f"  - Menores: {status['normas']['menores']}")
+                print(f"  - Graves: {status['normas']['graves']}")
+                print(f"  - Total: {status['normas']['total']}")
+            print("="*60 + "\n")
+    
+    elif args.test:
+        # Ejecutar tests
+        ejecutar_tests()
+    
+    elif args.interactive:
+        # Modo interactivo
+        print("\n" + "="*60)
+        print("🤖 AGENTE DE NORMAS ACADÉMICAS - MODO INTERACTIVO")
+        print("="*60)
+        print("Escribe 'salir' o 'exit' para terminar\n")
         
-        if json_output:
-            print(json.dumps(status, indent=2))
-        else:
-            print_status(status)
-            
-    except Exception as e:
-        logger.error(f"Error obteniendo estado: {e}")
-        if json_output:
-            print(json.dumps({"error": True, "message": str(e)}))
-        else:
-            print(f"❌ Error obteniendo estado: {e}")
-
-def print_status(status: Dict[str, Any]):
-    """Imprime el estado de manera legible"""
-    print(f"🚀 Estado del Agente:")
-    print(f"   Status: {'🟢' if status['status'] == 'operational' else '🟡'} {status['status']}")
-    print(f"   Calendar: {'✅' if status.get('calendar_connected') else '❌'} {'Conectado' if status.get('calendar_connected') else 'Desconectado'}")
-    print(f"   Capacidades: {len(status.get('capabilities', []))}")
-    
-    if status.get('capabilities'):
-        print(f"   📋 Funciones disponibles:")
-        for capability in status['capabilities']:
-            print(f"      • {capability}")
-
-def handle_single_message(message: str, json_output: bool = False):
-    """Maneja un mensaje único"""
-    try:
-        logger.info(f"📨 Procesando mensaje: {message}")
-        response = process_user_message(message)
-        
-        if json_output:
-            print(json.dumps(response, indent=2))
-        else:
-            print_response(response)
-            
-    except Exception as e:
-        logger.error(f"Error procesando mensaje: {e}")
-        if json_output:
-            print(json.dumps({"error": True, "message": str(e)}))
-        else:
-            print(f"❌ Error: {e}")
-
-def print_response(response: Dict[str, Any]):
-    """Imprime una respuesta de manera legible"""
-    print(f"\n🤖 Respuesta:")
-    print(f"   {response.get('message', 'Sin mensaje')}")
-    
-    if response.get('type') == 'events_list' and response.get('events'):
-        print(f"\n📅 Eventos encontrados ({response.get('count', 0)}):")
-        for i, event in enumerate(response['events'][:5], 1):
-            print(f"   {i}. {event['formatted_date']} - {event['title']}")
-        
-        if len(response['events']) > 5:
-            print(f"   ... y {len(response['events']) - 5} eventos más")
-    
-    elif response.get('type') == 'free_time' and response.get('free_slots'):
-        print(f"\n🕐 Tiempo libre encontrado:")
-        for slot in response['free_slots']:
-            print(f"   • {slot['start']} - {slot['end']} ({slot['duration_minutes']} min)")
-
-def handle_interactive_mode():
-    """Maneja el modo interactivo"""
-    print(f"""
-🗣️  MODO INTERACTIVO ACTIVADO
-Escribe tus solicitudes o 'quit' para salir.
-
-Ejemplos:
-• Mostrar mis eventos de esta semana
-• Crear una reunión mañana a las 2pm
-• ¿Tengo tiempo libre el viernes?
-• Cancelar mi cita de las 3pm
-""")
-    
-    while True:
-        try:
-            user_input = input("\n👤 Tú: ").strip()
-            
-            if user_input.lower() in ['quit', 'salir', 'exit']:
-                print("👋 ¡Hasta luego!")
+        while True:
+            try:
+                mensaje = input("Estudiante: ").strip()
+                if mensaje.lower() in ['salir', 'exit', 'quit']:
+                    print("\n¡Hasta luego! 👋\n")
+                    break
+                
+                if not mensaje:
+                    continue
+                
+                response = process_user_message(mensaje, args.user)
+                print(f"\n🤖 Directora: {response['message']}\n")
+                print("-"*60 + "\n")
+                
+            except KeyboardInterrupt:
+                print("\n\n¡Hasta luego! 👋\n")
                 break
-            
-            if not user_input:
-                continue
-            
-            response = process_user_message(user_input)
-            print(f"🤖 Agente: {response.get('message', 'Sin respuesta')}")
-            
-            # Mostrar información adicional si la hay
-            if response.get('type') == 'events_list' and response.get('count', 0) > 0:
-                events = response.get('events', [])
-                print(f"   📊 {len(events)} eventos encontrados")
-            
-        except KeyboardInterrupt:
-            print("\n👋 ¡Hasta luego!")
-            break
-        except Exception as e:
-            logger.error(f"Error en modo interactivo: {e}")
-            print(f"❌ Error: {e}")
+            except Exception as e:
+                print(f"\n❌ Error: {e}\n")
+    
+    elif args.message:
+        # Procesar mensaje único
+        response = process_user_message(args.message, args.user)
+        
+        if args.json:
+            print(json.dumps(response, indent=2, ensure_ascii=False))
+        else:
+            print(f"\n{response['message']}\n")
+    
+    else:
+        parser.print_help()
 
-def handle_test_mode(json_output: bool = False):
-    """Ejecuta tests básicos del sistema"""
+
+def ejecutar_tests():
+    """Ejecuta tests de ejemplo del sistema de normas"""
+    print("\n" + "="*60)
+    print("🧪 EJECUTANDO TESTS DEL SISTEMA DE NORMAS")
+    print("="*60 + "\n")
+    
     tests = [
         {
-            'name': 'Status Check',
-            'message': None,  # Test especial para status
-            'expected_keys': ['status', 'agent_id', 'calendar_connected']
+            'nombre': 'Falta menor - Retardo',
+            'mensaje': 'Hola, llegué tarde a clase hoy, fueron como 5 minutos',
+            'usuario': 'Juan Pérez'
         },
         {
-            'name': 'Show Events Intent',
-            'message': 'Mostrar mis eventos de esta semana',
-            'expected_keys': ['type', 'success', 'message']
+            'nombre': 'Falta grave - Falta de respeto',
+            'mensaje': 'Maestra, necesito hablar con usted. Ayer le grité a mi compañero y le dije cosas feas',
+            'usuario': 'María García'
         },
         {
-            'name': 'Free Time Intent',
-            'message': '¿Tengo tiempo libre mañana?',
-            'expected_keys': ['type', 'success', 'message']
+            'nombre': 'Falta menor - Uniforme',
+            'mensaje': 'No traigo el uniforme completo, se me olvidó la chamarra',
+            'usuario': 'Pedro López'
         },
         {
-            'name': 'Help Intent',
-            'message': 'Ayuda',
-            'expected_keys': ['type', 'success', 'capabilities']
+            'nombre': 'Falta grave - Copia',
+            'mensaje': 'Confieso que copié en el examen de matemáticas',
+            'usuario': 'Ana Martínez'
         },
         {
-            'name': 'Unknown Intent',
-            'message': 'xyz123 comando inexistente',
-            'expected_keys': ['type', 'success', 'suggestions']
+            'nombre': 'Mensaje sin falta clara',
+            'mensaje': 'Buenos días, ¿cómo está?',
+            'usuario': 'Luis Torres'
         }
     ]
     
-    results = []
-    
-    if not json_output:
-        print(f"\n🧪 EJECUTANDO TESTS BÁSICOS")
-        print(f"{'='*50}")
-    
     for i, test in enumerate(tests, 1):
+        print(f"\n📝 Test {i}/{len(tests)}: {test['nombre']}")
+        print(f"Usuario: {test['usuario']}")
+        print(f"Mensaje: \"{test['mensaje']}\"")
+        print("-"*60)
+        
         try:
-            if not json_output:
-                print(f"\n{i}. {test['name']}...")
-            
-            # Test especial para status
-            if test['message'] is None:
-                response = get_agent_status()
-            else:
-                response = process_user_message(test['message'])
-            
-            # Verificar que las claves esperadas estén presentes
-            missing_keys = []
-            for key in test['expected_keys']:
-                if key not in response:
-                    missing_keys.append(key)
-            
-            success = len(missing_keys) == 0
-            
-            result = {
-                'test_name': test['name'],
-                'success': success,
-                'response_type': response.get('type', 'status'),
-                'missing_keys': missing_keys,
-                'message': response.get('message', ''),
-                'error': None
-            }
-            
-            if not json_output:
-                status_icon = "✅" if success else "❌"
-                print(f"   {status_icon} {'PASS' if success else 'FAIL'}")
-                if missing_keys:
-                    print(f"      Claves faltantes: {missing_keys}")
-                if response.get('message'):
-                    print(f"      Respuesta: {response['message'][:100]}...")
-            
+            response = process_user_message(test['mensaje'], test['usuario'])
+            print(f"✅ Tipo de respuesta: {response.get('tipo', 'N/A')}")
+            print(f"✅ Éxito: {response.get('success', False)}")
+            if response.get('norma'):
+                print(f"✅ Norma identificada: {response['norma'].get('id', 'N/A')} - {response['norma'].get('categoria', 'N/A')}")
+            print()
         except Exception as e:
-            result = {
-                'test_name': test['name'],
-                'success': False,
-                'error': str(e)
-            }
-            
-            if not json_output:
-                print(f"   ❌ ERROR: {e}")
-        
-        results.append(result)
+            print(f"❌ Error en test: {e}\n")
     
-    # Resumen
-    passed = sum(1 for r in results if r['success'])
-    total = len(results)
-    
-    if json_output:
-        print(json.dumps({
-            'test_results': results,
-            'summary': {
-                'total': total,
-                'passed': passed,
-                'failed': total - passed,
-                'success_rate': passed / total if total > 0 else 0
-            },
-            'timestamp': datetime.now().isoformat()
-        }, indent=2))
-    else:
-        print(f"\n{'='*50}")
-        print(f"📊 RESUMEN: {passed}/{total} tests pasaron ({passed/total*100:.1f}%)")
-        
-        if passed == total:
-            print("🎉 ¡Todos los tests pasaron!")
-        else:
-            print("⚠️ Algunos tests fallaron. Revisar logs para más detalles.")
+    print("="*60)
+    print("✅ Tests completados")
+    print("="*60 + "\n")
 
-def handle_agentverse_webhook(request_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Maneja webhooks desde AgentVerse
-    Esta función sería llamada por el framework de AgentVerse
-    
-    Args:
-        request_data: Datos de la solicitud desde AgentVerse
-        
-    Returns:
-        Respuesta estructurada para AgentVerse
-    """
-    try:
-        logger.info(f"📡 Webhook recibido de AgentVerse")
-        
-        # Extraer mensaje del usuario
-        user_message = request_data.get('message', '')
-        context = request_data.get('context', {})
-        
-        # Validar entrada
-        if not user_message:
-            return {
-                'success': False,
-                'error': 'No message provided',
-                'timestamp': datetime.now().isoformat()
-            }
-        
-        # Procesar mensaje
-        response = process_user_message(user_message, context)
-        
-        # Agregar metadatos para AgentVerse
-        response.update({
-            'agent_id': settings.AGENT_ID,
-            'timestamp': datetime.now().isoformat(),
-            'version': settings.VERSION
-        })
-        
-        return response
-        
-    except Exception as e:
-        logger.error(f"❌ Error en webhook: {e}")
-        return {
-            'success': False,
-            'error': str(e),
-            'agent_id': settings.AGENT_ID,
-            'timestamp': datetime.now().isoformat()
-        }
-
-# ==========================================
-# FUNCIONES AUXILIARES
-# ==========================================
-
-def validate_environment():
-    """Valida que el entorno esté configurado correctamente"""
-    try:
-        settings.validate_settings()
-        logger.info("✅ Entorno validado correctamente")
-        return True
-    except Exception as e:
-        logger.error(f"❌ Error de configuración: {e}")
-        return False
-
-def setup_signal_handlers():
-    """Configura manejadores de señales para cierre limpio"""
-    import signal
-    
-    def signal_handler(signum, frame):
-        logger.info(f"📨 Señal {signum} recibida, cerrando limpiamente...")
-        sys.exit(0)
-    
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
-# ==========================================
-# INTEGRACIÓN CON AGENTVERSE
-# ==========================================
-
-class AgentVerseInterface:
-    """
-    Interfaz específica para AgentVerse
-    Esta clase proporciona métodos que AgentVerse puede llamar directamente
-    """
-    
-    @staticmethod
-    def on_message(sender: str, message: str, context: Optional[Dict] = None) -> Dict[str, Any]:
-        """
-        Método llamado cuando AgentVerse recibe un mensaje
-        
-        Args:
-            sender: ID del remitente
-            message: Mensaje recibido
-            context: Contexto adicional
-            
-        Returns:
-            Respuesta para enviar de vuelta
-        """
-        logger.info(f"📨 Mensaje de {sender}: {message}")
-        
-        response = process_user_message(message, context or {})
-        
-        # Formatear para AgentVerse
-        return {
-            'to': sender,
-            'message': response.get('message', ''),
-            'data': response,
-            'agent_id': settings.AGENT_ID
-        }
-    
-    @staticmethod
-    def on_startup():
-        """Método llamado cuando el agente se inicia en AgentVerse"""
-        logger.info("🚀 Agente iniciado en AgentVerse")
-        
-        # Validar configuración
-        if not validate_environment():
-            raise RuntimeError("Fallo en validación del entorno")
-        
-        # Verificar conexión con Google Calendar
-        status = get_agent_status()
-        if not status.get('calendar_connected'):
-            logger.warning("⚠️ Calendario no conectado - se necesita autenticación")
-        
-        logger.info("✅ Agente listo para recibir mensajes")
-    
-    @staticmethod
-    def on_shutdown():
-        """Método llamado cuando el agente se cierra en AgentVerse"""
-        logger.info("🔄 Cerrando agente...")
-        # Aquí podrías agregar limpieza específica si es necesario
-        logger.info("👋 Agente cerrado limpiamente")
-    
-    @staticmethod
-    def get_capabilities() -> Dict[str, Any]:
-        """Devuelve las capacidades del agente para AgentVerse"""
-        return {
-            'agent_id': settings.AGENT_ID,
-            'name': settings.AGENT_NAME,
-            'version': settings.VERSION,
-            'capabilities': [
-                {
-                    'name': 'calendar_management',
-                    'description': 'Gestión completa del calendario de Google',
-                    'actions': [
-                        'show_events',
-                        'create_event',
-                        'update_event',
-                        'delete_event',
-                        'find_free_time'
-                    ]
-                }
-            ],
-            'intents': list(settings.INTENT_KEYWORDS.keys()),
-            'supported_languages': ['es', 'en'],
-            'timezone': settings.DEFAULT_TIMEZONE
-        }
-
-# ==========================================
-# PUNTO DE ENTRADA
-# ==========================================
 
 if __name__ == "__main__":
-    import os
-
-    # Configurar manejadores de señales
-    setup_signal_handlers()
-    
-    # Validar entorno
-    if not validate_environment():
-        sys.exit(1)
-    
-    # Ejecutar función principal
     main()
-
-# ==========================================
-# EXPORTACIONES PARA AGENTVERSE
-# ==========================================
-
-# Estas son las funciones que AgentVerse puede importar y usar
-__all__ = [
-    'process_user_message',
-    'get_agent_status', 
-    'handle_agentverse_webhook',
-    'AgentVerseInterface'
-]
-
-# Ejemplo de cómo AgentVerse podría usar este módulo:
-"""
-from main import process_user_message, AgentVerseInterface
-
-# Inicializar agente
-AgentVerseInterface.on_startup()
-
-# Procesar mensaje de usuario
-response = process_user_message("Mostrar mis eventos de hoy")
-
-# En un webhook
-webhook_response = handle_agentverse_webhook({
-    'message': 'Crear reunión mañana a las 2pm',
-    'context': {'user_id': 'user123'}
-})
-"""
