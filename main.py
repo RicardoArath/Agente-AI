@@ -8,15 +8,15 @@ from datetime import datetime, timedelta
 import json
 
 # Importaciones existentes (mantén tus imports actuales)
-from config.settings import AGENT_ID, DEBUG, TIMEZONE
-from auth.google_auth import GoogleAuthManager
+from config.settings import settings
 from calendar_service.calendar_client import GoogleCalendarClient
 from nlp.message_processor import MessageProcessor
-from utils.logger import setup_logger
+from utils.logger import setup_logging, get_logger
 from normas.normas_processor import NormasProcessor  # NUEVO
 
-logger = setup_logger(__name__)
 
+
+logger = get_logger(__name__)
 
 class AgentVerseInterface:
     """Interfaz para AgentVerse"""
@@ -24,9 +24,9 @@ class AgentVerseInterface:
     @staticmethod
     def on_startup():
         """Se ejecuta cuando el agente inicia"""
-        logger.info(f"Agente {AGENT_ID} iniciado correctamente")
+        logger.info(f"Agente {settings.AGENT_ID} iniciado correctamente")
         logger.info("Funcionalidad de gestión de normas activa")
-        return {"status": "ready", "agent_id": AGENT_ID}
+        return {"status": "ready", "agent_id": settings.AGENT_ID}
     
     @staticmethod
     def on_message(sender: str, message: str) -> dict:
@@ -46,7 +46,7 @@ class AgentVerseInterface:
         response = process_user_message(message, sender)
         
         return {
-            "sender": AGENT_ID,
+            "sender": settings.AGENT_ID,
             "message": response.get('message', ''),
             "metadata": {
                 "timestamp": datetime.now().isoformat(),
@@ -97,8 +97,7 @@ def process_user_message(message: str, user_id: str = "usuario") -> dict:
         else:
             # Procesamiento normal de calendario (tu código existente)
             message_processor = MessageProcessor()
-            auth_manager = GoogleAuthManager()
-            calendar_client = GoogleCalendarClient(auth_manager)
+            calendar_client = GoogleCalendarClient()
             
             # Aquí va tu lógica existente de procesamiento de mensajes de calendario
             parsed = message_processor.parse_message(message)
@@ -140,8 +139,7 @@ def manejar_falta_grave(resultado: dict, user_id: str) -> dict:
         duracion = resultado.get('duracion_cita', 30)
         
         # Inicializar cliente de calendario
-        auth_manager = GoogleAuthManager()
-        calendar_client = GoogleCalendarClient(auth_manager)
+        calendar_client = GoogleCalendarClient()
         
         # Buscar primer espacio disponible
         inicio_busqueda = datetime.now()
@@ -173,11 +171,10 @@ def manejar_falta_grave(resultado: dict, user_id: str) -> dict:
         
         # Crear evento en el calendario
         evento_creado = calendar_client.create_event(
-            summary=f"Reunión - {norma.get('categoria', 'Situación académica')}",
-            start_time=primer_espacio['start'],
-            end_time=primer_espacio['end'],
+            title=f"Reunión - {norma.get('categoria', 'Situación académica')}",
+            start_datetime=primer_espacio['start'],
+            end_datetime=primer_espacio['end'],
             description=f"Reunión sobre: {norma.get('descripcion', 'situación académica')}\n\nEstudiante: {user_id}",
-            attendees=[],  # Aquí podrías agregar el email del estudiante si lo tienes
             location="Oficina de Dirección"
         )
         
@@ -292,8 +289,7 @@ def get_agent_status() -> dict:
         dict: Estado del agente
     """
     try:
-        auth_manager = GoogleAuthManager()
-        calendar_client = GoogleCalendarClient(auth_manager)
+        calendar_client = GoogleCalendarClient()
         normas_processor = NormasProcessor()
         
         # Verificar conexión con calendario
@@ -306,7 +302,7 @@ def get_agent_status() -> dict:
         
         return {
             'status': 'active',
-            'agent_id': AGENT_ID,
+            'agent_id': settings.AGENT_ID,
             'calendar': calendar_status,
             'normas': {
                 'menores': total_normas_menores,
