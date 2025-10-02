@@ -6,18 +6,13 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Any
 from functools import lru_cache
+import pytz
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-
-# Importar pytz para manejo correcto de timezones
-try:
-    import pytz
-except ImportError:
-    raise ImportError("pytz no está instalado. Ejecuta: pip install pytz")
 
 from config.settings import settings
 from utils.exceptions import CalendarError, AuthenticationError
@@ -504,230 +499,87 @@ class GoogleCalendarClient:
             logger.error(f"❌ Error inesperado eliminando evento: {e}")
             raise CalendarError(f"Error eliminando evento: {e}")
     
+
     def find_free_time(self,
         start_date: datetime,
         end_date: datetime,
         duration_minutes: int = 30,
         calendar_id: Optional[str] = None) -> List[Dict]:
-        """
-        Encuentra espacios libres en el calendario usando un algoritmo optimizado
-        
-        Args:
-            start_date: Fecha/hora de inicio de búsqueda
-            end_date: Fecha/hora de fin de búsqueda
-            duration_minutes: Duración del espacio buscado en minutos
-            calendar_id: ID del calendario
-            
-        Returns:
-            Lista de espacios libres con 'start' y 'end'
-        """
         if calendar_id is None:
             calendar_id = settings.CALENDAR_ID
-            
+
         if self.service is None:
             raise CalendarError("Cliente de Calendar no está inicializado")
-        
+
         try:
             logger.info(f"🔍 Buscando espacios libres de {duration_minutes} minutos")
-            
-            # Normalizar fechas con timezone
+
+            # Normalizar TZ y microsegundos
             tz = pytz.timezone(settings.DEFAULT_TIMEZONE)
-            
-            if start_date.tzinfo is None:
-                start_date = tz.localize(start_date)
-            else:
-                start_date = start_date.astimezone(tz)
-            
-            if end_date.tzinfo is None:
-                end_date = tz.localize(end_date)
-            else:
-                end_date = end_date.astimezone(tz)
-            
-            # Formatear fechas para la API
+            start_date = (tz.localize(start_date) if start_date.tzinfo is None else start_date.astimezone(tz)).replace(microsecond=0)
+            end_date = (tz.localize(end_date) if end_date.tzinfo is None else end_date.astimezone(tz)).replace(microsecond=0)
+
             time_min = format_datetime_for_api(start_date)
             time_max = format_datetime_for_api(end_date)
-            
+
             logger.info(f"📅 Rango de búsqueda: {time_min} a {time_max}")
-            
-            # Obtener eventos existentes
-            eventos = self.get_events(
-                time_min=time_min,
-                time_max=time_max,
-                calendar_id=calendar_id
-            )
-            
+
+            eventos = self.get_events(time_min=time_min, time_max=time_max, calendar_id=calendar_id)
             logger.info(f"📊 {len(eventos)} eventos encontrados en el rango")
-            
-            # Si no hay eventos, el primer slot disponible es el inicio
+
             if not eventos:
-                logger.info("✅ No hay eventos, retornando primer espacio desde inicio")
                 return [{
                     'start': start_date,
                     'end': start_date + timedelta(minutes=duration_minutes),
                     'duration_minutes': duration_minutes
                 }]
-            
-            # Parsear y ordenar eventos por fecha de inicio
+
             eventos_parseados = []
             for evento in eventos:
                 try:
-                    start_str = evento['start_datetime']
-                    end_str = evento['end_datetime']
-                    
-                    # Parsear fechas
-                    event_start = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
-                    event_end = datetime.fromisoformat(end_str.replace('Z', '+00:00'))
-                    
-                    # Convertir a timezone local
-                    if event_start.tzinfo is None:
-                        event_start = tz.localize(event_start)
-                    else:
-                        event_start = event_start.astimezone(tz)
-                    
-                    if event_end.tzinfo is None:
-                        event_end = tz.localize(event_end)
-                    else:
-                        event_end = event_end.astimezone(tz)
-                    
-                    eventos_parseados.append({
-                        'start': event_start,
-                        'end': event_end,
-                        'title': evento.get('title', 'Sin título')
-                    })
-                    
+                    event_start = datetime.fromisoformat(evento['start_datetime'].replace('Z', '+00:00')).replace(microsecond=0)
+                    event_end = datetime.fromisoformat(evento['end_datetime'].replace('Z', '+00:00')).replace(microsecond=0)
+
+                    event_start = event_start.astimezone(tz)
+                    event_end = event_end.astimezone(tz)
+
+                    eventos_parseados.append({'start': event_start, 'end': event_end})
                 except Exception as e:
                     logger.warning(f"⚠️ Error parseando evento: {e}")
                     continue
-            
-            # Ordenar por fecha de inicio
+
             eventos_parseados.sort(key=lambda x: x['start'])
-            
             logger.info(f"✅ {len(eventos_parseados)} eventos parseados y ordenados")
-            
-            # Buscar espacios libres
+
             espacios_libres = []
             duracion = timedelta(minutes=duration_minutes)
-            
-            # Configuración de horario laboral
-            hora_inicio = settings.BUSINESS_HOURS_START
-            hora_fin = settings.BUSINESS_HOURS_END
-            
-            # Verificar si hay espacio antes del primer evento
-            primer_evento_start = eventos_parseados[0]['start']
-            
-            # Ajustar start_date al horario laboral del primer día
-            dia_actual = start_date.replace(hour=hora_inicio, minute=0, second=0, microsecond=0)
-            
-            # Si start_date es después del inicio del horario laboral, usar start_date
-            if start_date > dia_actual:
-                dia_actual = start_date
-            
-            # Verificar espacio antes del primer evento
-            if dia_actual + duracion <= primer_evento_start:
-                # Hay espacio antes del primer evento
-                # Buscar slots en ese gap
-                tiempo_actual = dia_actual
-                while tiempo_actual + duracion <= primer_evento_start:
-                    # Verificar que esté en horario laboral
-                    if (tiempo_actual.hour >= hora_inicio and 
-                        (tiempo_actual + duracion).hour <= hora_fin and
-                        tiempo_actual.weekday() < 5):  # Lunes a Viernes
-                        
-                        espacios_libres.append({
-                            'start': tiempo_actual,
-                            'end': tiempo_actual + duracion,
-                            'duration_minutes': duration_minutes
-                        })
-                        
-                        if len(espacios_libres) >= 10:
-                            logger.info(f"✅ Encontrados {len(espacios_libres)} espacios libres")
-                            return espacios_libres
-                    
-                    tiempo_actual += timedelta(minutes=30)
-                    
-                    # Si salimos del horario laboral, saltar al siguiente día
-                    if tiempo_actual.hour >= hora_fin:
-                        tiempo_actual = (tiempo_actual + timedelta(days=1)).replace(
-                            hour=hora_inicio, minute=0, second=0, microsecond=0
-                        )
-            
-            # Buscar gaps entre eventos consecutivos
-            for i in range(len(eventos_parseados) - 1):
-                evento_actual_end = eventos_parseados[i]['end']
-                evento_siguiente_start = eventos_parseados[i + 1]['start']
-                
-                gap = evento_siguiente_start - evento_actual_end
-                
-                logger.debug(f"🕐 Gap entre eventos: {gap}")
-                
-                if gap >= duracion:
-                    # Hay un gap suficientemente grande
-                    # Buscar slots en ese gap
-                    tiempo_actual = evento_actual_end
-                    
-                    while tiempo_actual + duracion <= evento_siguiente_start:
-                        # Verificar que esté en horario laboral y día hábil
-                        if (tiempo_actual.hour >= hora_inicio and 
-                            (tiempo_actual + duracion).hour <= hora_fin and
-                            tiempo_actual.weekday() < 5):
-                            
-                            espacios_libres.append({
-                                'start': tiempo_actual,
-                                'end': tiempo_actual + duracion,
-                                'duration_minutes': duration_minutes
-                            })
-                            
-                            if len(espacios_libres) >= 10:
-                                logger.info(f"✅ Encontrados {len(espacios_libres)} espacios libres")
-                                return espacios_libres
-                        
-                        tiempo_actual += timedelta(minutes=30)
-                        
-                        # Si salimos del horario laboral, saltar al siguiente día
-                        if tiempo_actual.hour >= hora_fin:
-                            tiempo_actual = (tiempo_actual + timedelta(days=1)).replace(
-                                hour=hora_inicio, minute=0, second=0, microsecond=0
-                            )
-                            
-                            # Si el siguiente día está fuera del gap, salir del while
-                            if tiempo_actual >= evento_siguiente_start:
-                                break
-            
-            # Verificar si hay espacio después del último evento
-            ultimo_evento_end = eventos_parseados[-1]['end']
-            
-            tiempo_actual = ultimo_evento_end
-            
-            while tiempo_actual + duracion <= end_date:
-                # Verificar que esté en horario laboral y día hábil
-                if (tiempo_actual.hour >= hora_inicio and 
-                    (tiempo_actual + duracion).hour <= hora_fin and
-                    tiempo_actual.weekday() < 5):
-                    
+
+            # ---- REGLA NUEVA: incluir hueco inicial ----
+            current_start = start_date
+            for ev in eventos_parseados:
+                if ev['start'] - current_start >= duracion:
                     espacios_libres.append({
-                        'start': tiempo_actual,
-                        'end': tiempo_actual + duracion,
+                        'start': current_start,
+                        'end': ev['start'],
                         'duration_minutes': duration_minutes
                     })
-                    
-                    if len(espacios_libres) >= 10:
-                        logger.info(f"✅ Encontrados {len(espacios_libres)} espacios libres")
-                        return espacios_libres
-                
-                tiempo_actual += timedelta(minutes=30)
-                
-                # Si salimos del horario laboral, saltar al siguiente día
-                if tiempo_actual.hour >= hora_fin:
-                    tiempo_actual = (tiempo_actual + timedelta(days=1)).replace(
-                        hour=hora_inicio, minute=0, second=0, microsecond=0
-                    )
-            
+                current_start = max(current_start, ev['end'])
+
+            # ---- REGLA NUEVA: hueco después del último evento ----
+            if end_date - current_start >= duracion:
+                espacios_libres.append({
+                    'start': current_start,
+                    'end': end_date,
+                    'duration_minutes': duration_minutes
+                })
+
             logger.info(f"✅ Encontrados {len(espacios_libres)} espacios libres")
             return espacios_libres
-            
+
         except Exception as e:
             logger.error(f"❌ Error buscando espacios libres: {e}", exc_info=True)
             raise CalendarError(f"Error buscando espacios libres: {e}")
+
         
     @lru_cache(maxsize=128)
     def get_calendar_info(self, calendar_id: Optional[str] = None) -> Dict:
