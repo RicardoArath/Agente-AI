@@ -67,7 +67,7 @@ class Settings:
     
     # Horario laboral
     BUSINESS_HOURS_START = 9   # 9 AM
-    BUSINESS_HOURS_END = 17    # 5 PM
+    BUSINESS_HOURS_END = 23    # 5 PM
     
     # ==========================================
     # CONFIGURACIÓN DE LOGGING

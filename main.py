@@ -6,6 +6,7 @@ import sys
 import argparse
 from datetime import datetime, timedelta
 import json
+import pytz
 
 # Importaciones existentes (mantén tus imports actuales)
 from config.settings import settings
@@ -141,11 +142,12 @@ def manejar_falta_grave(resultado: dict, user_id: str) -> dict:
         # Inicializar cliente de calendario
         calendar_client = GoogleCalendarClient()
         
-        # Buscar primer espacio disponible
-        inicio_busqueda = datetime.now()
+        # Buscar primer espacio disponible con timezone
+        tz = pytz.timezone(settings.DEFAULT_TIMEZONE)
+        inicio_busqueda = datetime.now(tz)
         fin_busqueda = inicio_busqueda + timedelta(days=7)
-        
-        logger.info(f"Buscando espacios libres entre {inicio_busqueda} y {fin_busqueda}")
+
+        logger.info(f"🔍 Buscando espacios libres entre {inicio_busqueda.isoformat()} y {fin_busqueda.isoformat()}")
         
         espacios_libres = calendar_client.find_free_time(
             start_date=inicio_busqueda,
@@ -169,11 +171,11 @@ def manejar_falta_grave(resultado: dict, user_id: str) -> dict:
         # Tomar el primer espacio disponible
         primer_espacio = espacios_libres[0]
         
-        # Crear evento en el calendario
+        # Crear evento en el calendario (convertir datetime a string ISO)
         evento_creado = calendar_client.create_event(
             title=f"Reunión - {norma.get('categoria', 'Situación académica')}",
-            start_datetime=primer_espacio['start'],
-            end_datetime=primer_espacio['end'],
+            start_datetime=primer_espacio['start'].isoformat(),
+            end_datetime=primer_espacio['end'].isoformat(),
             description=f"Reunión sobre: {norma.get('descripcion', 'situación académica')}\n\nEstudiante: {user_id}",
             location="Oficina de Dirección"
         )

@@ -504,6 +504,169 @@ class GoogleCalendarClient:
             logger.error(f"❌ Error inesperado eliminando evento: {e}")
             raise CalendarError(f"Error eliminando evento: {e}")
     
+    def find_free_time(self,
+        start_date: datetime,
+        end_date: datetime,
+        duration_minutes: int = 60,
+        calendar_id: Optional[str] = None) -> List[Dict]:
+        """
+        Encuentra espacios libres en el calendario
+        
+        Args:
+            start_date: Fecha/hora de inicio de búsqueda
+            end_date: Fecha/hora de fin de búsqueda
+            duration_minutes: Duración del espacio buscado en minutos
+            calendar_id: ID del calendario
+            
+        Returns:
+            Lista de espacios libres con 'start' y 'end'
+        """
+        if calendar_id is None:
+            calendar_id = settings.CALENDAR_ID
+            
+        if self.service is None:
+            raise CalendarError("Cliente de Calendar no está inicializado")
+        
+        try:
+            logger.info(f"🔍 Buscando espacios libres de {duration_minutes} minutos")
+            
+            # ===== FIX 1: Normalizar fechas de entrada con timezone =====
+            tz = pytz.timezone(settings.DEFAULT_TIMEZONE)
+            
+            # Asegurar que start_date tenga timezone
+            if start_date.tzinfo is None:
+                start_date = tz.localize(start_date)
+            else:
+                start_date = start_date.astimezone(tz)
+            
+            # Asegurar que end_date tenga timezone
+            if end_date.tzinfo is None:
+                end_date = tz.localize(end_date)
+            else:
+                end_date = end_date.astimezone(tz)
+            
+            # Formatear fechas para la API
+            time_min = format_datetime_for_api(start_date)
+            time_max = format_datetime_for_api(end_date)
+            
+            logger.info(f"📅 Rango de búsqueda: {time_min} a {time_max}")
+            
+            # Obtener eventos existentes en el rango
+            eventos = self.get_events(
+                time_min=time_min,
+                time_max=time_max,
+                calendar_id=calendar_id
+            )
+            
+            # ===== FIX 2: Convertir eventos a períodos ocupados con timezone =====
+            periodos_ocupados = []
+            for evento in eventos:
+                start_str = evento['start_datetime']
+                end_str = evento['end_datetime']
+                
+                # Parsear fechas asegurando timezone
+                try:
+                    # Parsear y convertir a timezone aware
+                    start = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
+                    end = datetime.fromisoformat(end_str.replace('Z', '+00:00'))
+                    
+                    # Convertir a la timezone local si es necesario
+                    if start.tzinfo is None:
+                        start = tz.localize(start)
+                    else:
+                        start = start.astimezone(tz)
+                    
+                    if end.tzinfo is None:
+                        end = tz.localize(end)
+                    else:
+                        end = end.astimezone(tz)
+                    
+                    periodos_ocupados.append({'start': start, 'end': end})
+                    
+                except Exception as e:
+                    logger.warning(f"⚠️ Error parseando evento: {e}")
+                    continue
+            
+            # ===== FIX 3: Ahora sí podemos ordenar (todas las fechas tienen timezone) =====
+            periodos_ocupados.sort(key=lambda x: x['start'])
+            
+            logger.info(f"📊 {len(periodos_ocupados)} períodos ocupados encontrados")
+            
+            # Buscar espacios libres
+            espacios_libres = []
+            current_time = start_date
+            search_end = end_date
+            duracion = timedelta(minutes=duration_minutes)
+            
+            # Definir horario laboral
+            hora_inicio = settings.BUSINESS_HOURS_START
+            hora_fin = settings.BUSINESS_HOURS_END
+            
+            # Iterar por cada día en el rango
+            dias_a_revisar = (search_end - current_time).days + 1
+            
+            for dia_offset in range(dias_a_revisar):
+                dia_actual = current_time + timedelta(days=dia_offset)
+                
+                # Saltar fines de semana
+                if dia_actual.weekday() >= 5:  # 5=Sábado, 6=Domingo
+                    continue
+                
+                # Inicio y fin del horario laboral para este día
+                inicio_dia = dia_actual.replace(hour=hora_inicio, minute=0, second=0, microsecond=0)
+                fin_dia = dia_actual.replace(hour=hora_fin, minute=0, second=0, microsecond=0)
+                
+                # Si es el día actual, empezar desde ahora
+                if dia_offset == 0:
+                    # Si ya pasó el horario laboral, saltar al siguiente día
+                    if current_time.hour >= hora_fin:
+                        continue
+                    inicio_dia = max(inicio_dia, current_time)
+                
+                # Buscar espacios en este día
+                tiempo_actual = inicio_dia
+                
+                while tiempo_actual + duracion <= fin_dia:
+                    logger.debug(f"🕐 Revisando: {tiempo_actual.strftime('%Y-%m-%d %H:%M')} - Dia: {dia_actual.strftime('%A')}")
+                    # Verificar si este espacio está libre
+                    espacio_libre = True
+                    espacio_fin = tiempo_actual + duracion
+                    
+                    for ocupado in periodos_ocupados:
+                        # Verificar si hay overlap
+                        if (tiempo_actual < ocupado['end'] and espacio_fin > ocupado['start']):
+                            espacio_libre = False
+                            # Saltar al final del período ocupado
+                            tiempo_actual = ocupado['end']
+                            break
+                    
+                    if espacio_libre:
+                        espacios_libres.append({
+                            'start': tiempo_actual,
+                            'end': espacio_fin,
+                            'duration_minutes': duration_minutes
+                        })
+                        # Avanzar 30 minutos para el siguiente espacio
+                        tiempo_actual += timedelta(minutes=30)
+                        
+                        # Limitar resultados (retornar máximo 10 espacios)
+                        if len(espacios_libres) >= 10:
+                            logger.info(f"✅ Encontrados {len(espacios_libres)} espacios libres")
+                            return espacios_libres
+                    else:
+                        # Si no hay espacio libre, avanzar 15 minutos
+                        if tiempo_actual + duracion <= fin_dia:
+                            tiempo_actual += timedelta(minutes=15)
+                        else:
+                            break
+            
+            logger.info(f"✅ Encontrados {len(espacios_libres)} espacios libres")
+            return espacios_libres
+            
+        except Exception as e:
+            logger.error(f"❌ Error buscando espacios libres: {e}", exc_info=True)
+            raise CalendarError(f"Error buscando espacios libres: {e}")
+        
     @lru_cache(maxsize=128)
     def get_calendar_info(self, calendar_id: Optional[str] = None) -> Dict:
         """
